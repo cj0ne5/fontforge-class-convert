@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+.DS_Store
+token*.json
+test_fonts
+
+# Working files from sync_drive.py; keep the empty folder
+drive_sync/*
+!drive_sync/.gitkeep
+
+credentials.json
