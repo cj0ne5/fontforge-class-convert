@@ -34,6 +34,7 @@ TOKEN = HERE / 'token.json'
 WORK_DIR = HERE / 'drive_sync'
 MANIFEST = WORK_DIR / 'manifest.json' # per student folder: Drive modified times of downloaded SVGs
 FONTFORGE = shutil.which('fontforge') or '/opt/homebrew/bin/fontforge'
+BUILD_TIMEOUT = 30 * 60 # seconds per student font
 
 
 def get_service():
@@ -161,13 +162,17 @@ def main():
 			continue
 
 		output_base = student_dir / f'{name}_{timestamp}'
-		proc = subprocess.run(
-			[FONTFORGE, '-script', str(HERE / 'batch_import_svg.py'), str(svg_dir), str(output_base), name],
-			capture_output=True, text=True,
-		)
+		try:
+			proc = subprocess.run(
+				[FONTFORGE, '-script', str(HERE / 'batch_import_svg.py'), str(svg_dir), str(output_base), name],
+				capture_output=True, text=True, timeout=BUILD_TIMEOUT,
+			)
+		except subprocess.TimeoutExpired:
+			results.append((name, f'FONT BUILD FAILED (took over {BUILD_TIMEOUT // 60} minutes)'))
+			continue
 		log = (proc.stdout + proc.stderr).strip()
 		for line in log.splitlines():
-			if line.startswith(('SKIPPED', 'Imported')):
+			if line.startswith(('SKIPPED', 'WARNING', 'Imported')):
 				print('  ' + line)
 		otf = output_base.with_name(output_base.name + '.otf')
 		if proc.returncode != 0 or not otf.exists():
